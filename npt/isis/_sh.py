@@ -1,55 +1,64 @@
 from npt import log
 
+from ._docker import containers as list_containers
+
 
 def _set_sh():
     from sh import bash
     return bash.bake('--login -c'.split())
 
+
 def _set_sh_docker(name):
     from sh import docker
     _exec_ = "exec -t {name!s} bash --login -c"
-    _run_ = ""
     if name not in list_containers():
-        # start/run conteiner
-        raise NotImplementedError
-
+        # start/run container
+        raise ValueError
     isissh = docker.bake(_exec_.format(name=name).split())
     return isissh
 
-def list_containers():
-    # from sh import docker
-    # res = docker('ps','-a')
-    return ['isis3']
 
-class Sh():
-    _sh = None
-    def __init__(self):
-        self.reset()
+def _map_args(args, map_paths):
+    log.debug(args)
+    log.debug(map_paths)
+    _args = []
+    for arg in args:
+        for _host,_cont in map_paths.values():
+            arg = arg.replace(_host, _cont)
+        _args.append(arg)
+    return _args
 
-    def __call__(self, *args, **kwargs):
-        return self._sh(*args, **kwargs)
 
-    @staticmethod
-    def log(res):
-        log.debug("Exit code: "+str(res and res.exit_code))
+def _map_kwargs(kwargs, map_paths):
+    log.debug(kwargs)
+    log.debug(map_paths)
+    maps = map_paths
+    _kw = {}
+    for key, val in kwargs.items():
+        try:
+            basepath_host = maps[key][0]
+            basepath_cont = maps[key][1]
+        except:
+            _kw[key] = val
+        else:
+            # those mappings are paths
+            _val = val.replace(basepath_host, basepath_cont)
+            _kw[key] = _val
+    return _kw
 
-    def set_docker(self, name):
-        assert name in list_containers()
-        self._sh = _set_sh_docker(name)
 
-    def reset(self):
-        _sh = _set_sh()
-        log.debug(_sh)
-        self._sh = _sh
-
-    def wrap(self, exec):
-        return _wrapper(exec, sh=self)
-
-sh = Sh()
-
-def _wrapper(exec, sh=sh):
+def _wrap(exec, sh, log=log):
     """
-    Wrap "exec" (eg, 'echo') by a 'Sh()'
+    Return 'sh' to be called with arguments to 'exec'
+
+    The wrapped 'sh' reports to log.debug and parse the (future) arguments
+    to build a string for sh('exec <future-args>').
+
+    Args:
+        exec: string
+            command to execute by the container
+        sh: Sh
+        log: logging-handler
     """
     if isinstance(exec, str):
         exec = [exec]
@@ -60,3 +69,46 @@ def _wrapper(exec, sh=sh):
         log.debug(comm)
         return sh(comm)
     return _sh
+
+
+class Sh():
+    _sh = None
+    _maps = None
+    def __init__(self):
+        self.reset()
+
+    def __call__(self, *args, **kwargs):
+        log.debug(args)
+        log.debug(kwargs)
+        if self._maps:
+            args = _map_args(args, self._maps)
+            kwargs = _map_kwargs(kwargs, self._maps)
+        return self._sh(*args, **kwargs)
+
+    def reset(self):
+        _sh = _set_sh()
+        log.debug(_sh)
+        self._sh = _sh
+
+    @staticmethod
+    def log(res):
+        log.debug("Exit code: "+str(res and res.exit_code))
+
+    def set_docker(self, name, mappings=None):
+        """
+        Args:
+            name: <string>
+                name of a running container
+            mappings: {'arg':('host','container')}
+                dictionary with tuples mapping host to container paths
+        """
+        assert name in list_containers()
+        self._sh = _set_sh_docker(name)
+        self._maps = mappings
+
+    def wrap(self, exec):
+        return _wrap(exec, sh=self)
+
+
+# Global/Singleton
+sh = Sh()

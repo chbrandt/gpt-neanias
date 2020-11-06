@@ -1,0 +1,3 @@
+[submodule "notebooks"]
+	path = notebooks
+	url = https://oauth2:cesdNGzshAyhssoxQaEt@gitlab.neanias.eu/c.brandt/notebooks.git

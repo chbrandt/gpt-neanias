@@ -54,24 +54,21 @@ def search(bbox, dataset, output, provider, contains):
             "[-0.5,0.5,359.5,0.5]"
 
     """
+    log.args(locals())
+
     bbox = bbox.replace('[','').replace(']','')
     bounding_box = bbox_string_2_dict(bbox)
-    # products = search_bbox(bbox=bounding_box,
-    #                        dataset=dataset_id,
-    #                        provider=provider,
-    #                        contains=contains)
+    log.debug("Bounding-box: {!s}".format(bounding_box))
+
     if output:
-        # json_2_geojson(products, filename=output)
         products = Search.run(bounding_box=bounding_box,
-                           dataset_id=dataset,
-                           # provider=provider,
                            geojson_filename=output,
+                           dataset_id=dataset,
                            contains=contains)
     else:
         import json
         products = Search.run(bounding_box=bounding_box,
                            dataset_id=dataset,
-                           # provider=provider,
                            contains=contains)
         click.echo(json.dumps(products, indent=2))
 
@@ -86,12 +83,17 @@ def download(geojson_file, basepath, output, progress, parallel):
     """
     Download features' image_url/label_url data products
     """
+    log.args(locals())
+
     features = geojson.read(geojson_file)
+    log.info("{:d} features read".format(len(features)))
+
     products = []
     for feature in features:
+        log.info("Feature {:d}/{:d}".format(i+1, len(features)))
         mod_feature = Download.run(feature, base_path=basepath, progressbar=progress)
         products.append(mod_feature)
-    log.debug(products)
+
     if output:
         json_2_geojson(products, filename=output)
     else:
@@ -102,23 +104,33 @@ def download(geojson_file, basepath, output, progress, parallel):
 @main.command()
 @argument('geojson_file')
 @argument('basepath')
-@option('--output', metavar='<.geojson>', default='', help="GeoJSON filename with query results")
+@option('--output', default=None, help="GeoJSON filename with query results")
 @option('--parallel/--serial', default=False, help="Process in parallel")
 @option('--docker-isis', default=None, help="ISIS3 Docker container to use")
 @option('--tmpdir', default=None, help="Temp dir to use during processing")
 def process(geojson_file, basepath, parallel, docker_isis, tmpdir, output):
     """
-    WIP
+    Reduce CTX data
     """
+    log.args(locals())
+
     features = geojson.read(geojson_file)
+    log.info("{:d} features read".format(len(features)))
+
     if docker_isis:
+        log.debug(f"Docker: {docker_isis}")
+        #FIXME: this is terrible...an import in the middle of the code
         from npt import isis
         isis.set_docker(docker_isis)
+
     products = []
-    for feature in features:
-        mod_feature = Processing.run(feature, output_path=basepath, tmpdir=tmpdir)
+    for i,feature in enumerate(features):
+        log.info("Feature {:d}/{:d}".format(i+1, len(features)))
+        mod_feature = Processing.run(feature,
+                                     output_path=basepath,
+                                     tmpdir=tmpdir)
         products.append(mod_feature)
-    log.debug(products)
+
     if output:
         json_2_geojson(products, filename=output)
     else:
@@ -133,6 +145,7 @@ def mosaic(filespath, basepath):
     """
     TBD
     """
+    log.args(locals())
     raise NotImplementedError
 
 

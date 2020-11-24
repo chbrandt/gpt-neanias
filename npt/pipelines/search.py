@@ -4,10 +4,10 @@ import geopandas as gpd
 
 from . import log
 
-from npt.pds.ode import ODE
+from npt import search
 
 
-def run(bounding_box, dataset_id, geojson_filename, contains=False):
+def run(bounding_box, dataset_id, output_filename, contains=False):
     """
     Write GeoJSON with products intersecting 'bounding_box'
 
@@ -20,38 +20,38 @@ def run(bounding_box, dataset_id, geojson_filename, contains=False):
     * geojson_filename:
         Filename for the GeoJSON containing found products as Features.
     """
-    output_filename = geojson_filename
-    products = query_footprints(bbox=bounding_box, dataset=dataset_id, contains=contains)
+    how = 'contain' if contains else 'intersect'
+    # products = query_footprints(bbox=bounding_box, dataset=dataset_id, contains=contains)
+    products = search.ode.bbox(bounding_box, dataset, how)
     if not products:
         return None
     if output_filename:
-        gdf = write_geojson(products, filename=output_filename)
-        return gdf
+        return write_geojson(products, filename=output_filename)
     return products
 
-query2geojson = run
-
-def query_footprints(bbox, dataset=None, contains=False,
-                     target='mars', host=None, instr=None, ptype=None):
-    """
-    Return list of found products (in dictionaries)
-
-    dataset be like: 'mro/hirise/rdrv11'
-    bbox: {'minlat': -0.5, 'maxlat': 0.5, 'westlon': 359.5, 'eastlon': 0.5}
-    """
-    if dataset:
-        target,host,instr,ptype = dataset.split('/')
-
-    ode = ODE(target,host,instr,ptype)
-
-    req = ode.query_bbox(bbox, contains=contains)
-
-    products = ode.read_products(req)
-
-    schema = {'meta':None, 'files':None, 'footprints':None}
-    products = ode.parse_products(products, schema)
-    return products
-
+# query2geojson = run
+#
+# def query_footprints(bbox, dataset=None, contains=False,
+#                      target='mars', host=None, instr=None, ptype=None):
+#     """
+#     Return list of found products (in dictionaries)
+#
+#     dataset be like: 'mro/hirise/rdrv11'
+#     bbox: {'minlat': -0.5, 'maxlat': 0.5, 'westlon': 359.5, 'eastlon': 0.5}
+#     """
+#     if dataset:
+#         target,host,instr,ptype = dataset.split('/')
+#
+#     ode = ODE(target,host,instr,ptype)
+#
+#     req = ode.query_bbox(bbox, contains=contains)
+#
+#     products = ode.read_products(req)
+#
+#     schema = {'meta':None, 'files':None, 'footprints':None}
+#     products = ode.parse_products(products, schema)
+#     return products
+#
 
 def write_geojson(products, filename):
     """
@@ -76,4 +76,4 @@ def write_geojson(products, filename):
 
     gdf.to_file(filename, driver='GeoJSON')
     log.info("File '{}' written.".format(filename))
-    return gdf
+    return True

@@ -1,3 +1,6 @@
+"""
+Query ODE API for different (PDS) datasets (http://oderest.rsl.wustl.edu/)
+"""
 import requests
 
 from npt import log
@@ -6,12 +9,12 @@ from npt import log
 _URL = 'https://oderest.rsl.wustl.edu/live2'
 
 DESCRIPTORS = {
-    'ctx': {
+    'mars/mro/ctx/edr': {
         'product_image': ('Description','PRODUCT DATA FILE WITH LABEL'),
         'browse_image': ('Description','BROWSE IMAGE'),
         'browse_thumbnail': ('Description','THUMBNAIL IMAGE')
     },
-    'hirise': {
+    'mars/mro/hirise/rdrv11': {
         'product_image': ('Description', 'PRODUCT DATA FILE'),
         'product_label': ('Description', 'PRODUCT LABEL FILE'),
         'browse_image': ('Description', 'BROWSE'),
@@ -56,8 +59,10 @@ def bounding_box(bbox, dataset, how='intersect'):
         return None
     return res
 
+    bbox = bounding_box
 
-def parse_products(odejson, descriptors):
+
+def parse_products(odejson, descriptor):
     try:
         products = odejson['ODEResults']['Products']['Product']
     except:
@@ -73,12 +78,12 @@ def parse_products(odejson, descriptors):
         _fprint = _readout_product_footprint(product)
         _pfile = _find_product_file(product_files=_files,
                                     product_type='product_image',
-                                    descriptors=descriptors)
+                                    descriptor=descriptor)
         _pfile = _pfile['URL']
         try:
             _lfile = _find_product_file(product_files=_files,
                                         product_type='product_label',
-                                        descriptors=descriptors)
+                                        descriptor=descriptor)
             _lfile = _lfile['URL']
         except KeyError as err:
             _lfile = _pfile
@@ -152,8 +157,8 @@ def _readout_product_meta(product_json):
     return product
 
 
-def _find_product_file(product_files, product_type, descriptors=DESCRIPTORS):
-    _key,_val = descriptors[product_type]
+def _find_product_file(product_files, product_type, descriptor):
+    _key,_val = descriptor[product_type]
     pfl = list(filter(lambda pf:pf[_key]==_val, product_files))
     _multiple_matches = "I was expecting only one Product matching ptype '{}' bu got '{}'."
     assert len(pfl) == 1, _multiple_matches.format(product_type, len(pfl))

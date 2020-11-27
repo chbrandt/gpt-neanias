@@ -7,4 +7,7 @@ logging.basicConfig(level=logging.DEBUG, format=_fmt)
 
 log = logging.getLogger()
 
-log.fair = lambda msg:log.info(f"[fair]{_sep}" + msg)
+def _log_fair(msg):
+    log.debug("[fair]{!s}{!s}".format(_sep, msg))
+
+log.fair = _log_fair

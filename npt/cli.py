@@ -32,13 +32,11 @@ def main(debug):
 
 
 @main.command()
-@argument('provider')
 @argument('dataset')
-@argument('bbox')
-@option('--output', default='', help="GeoJSON filename with query results")
-@option('--contains/--intersects', default=False, help="Bounding-box intersects or contains products' footprint")
-# @option('--provider', default='ode', help="Choose interface/provider to query")
-def search(bbox, dataset, output, provider, contains):
+@option('--bbox', default=None, help='Bounding-box where to search products')
+@option('--geojson_out', default='', help="GeoJSON filename with query results")
+@option('--contain/--intersect', default=False, help="Bounding-box intersects or contains products' footprint")
+def search(bbox=None, dataset=None, geojson_out=None, contain=False):
     """
     Query 'provider'/'dataset' for data products in/on 'bbox'
 
@@ -54,8 +52,14 @@ def search(bbox, dataset, output, provider, contains):
             "[-0.5,0.5,359.5,0.5]"
 
     """
-    log.args(locals())
+    return _search(bbox, dataset, geojson_out, contain)
 
+def _search(bbox=None, dataset=None, geojson_out=None, contain=False):
+    log.fair(locals())
+
+    if None in (bbox, dataset):
+        return False
+        
     bbox = bbox.replace('[','').replace(']','')
     bounding_box = bbox_string_2_dict(bbox)
     log.debug("Bounding-box: {!s}".format(bounding_box))

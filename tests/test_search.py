@@ -47,8 +47,8 @@ class TestODE:
         assert res['ODEResults']['QuerySummary']['query'].lower() == 'product'
         self.partial_results['bbox_small_contain'] = res
 
-    def test_parse_results_bbox_small_contain(self):
+    def test_parse_results_bbox_small_contain(self, dataset_ctx):
         odejson = self.partial_results['bbox_small_contain']
         print(type(odejson), odejson)
-        res = ode.parse_products(odejson, ode.DESCRIPTORS['ctx'])
+        res = ode.parse_products(odejson, ode.DESCRIPTORS[dataset_ctx])
         assert len(res) == 1

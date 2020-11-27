@@ -29,34 +29,39 @@ def download_file(url, filename=None, progress=False, make_dirs=True):
     """
     progress_on = progress
 
+    local_filename = filename
     if not filename:
-        local_filename = os.path.join('.', url.split('/')[-1])
-    else:
-        local_filename = filename
+        from urllib.parse import urlparse
+        from pathlib import Path
+        local_filename = Path(urlparse(url).path).name
 
-    if is_download_complete(url, local_filename):
+    log.debug("Local filename: {}".format(local_filename))
+
+    _already_here = is_download_complete(url, local_filename)
+    if _already_here:
         log.debug("File '{}' from '{}' already downloaded".format(local_filename, url))
         return local_filename
 
     _path = os.path.dirname(local_filename)
-    if not os.path.isdir(_path):
+    if _path and not os.path.isdir(_path):
         if make_dirs:
             os.makedirs(_path, exist_ok=True)
         else:
-            print("Path '{}' does not exist.".format(_path))
+            log.debug("Path '{}' does not exist.".format(_path))
             return None
+    del _path
 
-    print('--> Downloading file {} ..'.format(local_filename))
+    print('Downloading file {} ..'.format(url))
     ok = False
     if progress_on:
         ok = _progressbar(url, local_filename)
     else:
         ok = _quiet(url, local_filename)
     if not ok:
-        log.info("File '{}' could not be downloaded.".format(local_filename))
+        print("* File '{}' could not be downloaded.".format(local_filename))
         return None
 
-    print("File '{}' downloaded.".format(local_filename))
+    print("- File '{}' downloaded.".format(local_filename))
     return local_filename
 
 
@@ -113,13 +118,19 @@ def is_download_complete(url, filename):
         return False
 
     log.debug("File '{}' exist.".format(filename))
+
     try:
         r = requests.get(url, stream=True)
-        remote_size = int(r.headers['Content-Length'])
-        local_size = int(os.path.getsize(filename))
     except Exception as err:
         log.error(err)
-        return False
+        return None
+
+    if r.status_code >= 400:
+        log.error(r.content)
+        return None
+
+    remote_size = int(r.headers['Content-Length'])
+    local_size = int(os.path.getsize(filename))
     log.debug("Remote file size: " + str(remote_size))
     log.debug("Local file size: " + str(local_size))
     return local_size == remote_size
@@ -128,7 +139,7 @@ def is_download_complete(url, filename):
 # Couple of aliases to make the calls smaller
 #
 file = download_file
-files_list = download_files
+files = download_files
 is_downloaded = is_download_complete
 # ===========================================
 
@@ -141,7 +152,10 @@ def _quiet(url, filename):
         _quiet('http://web4host.net/5MB.zip', 'local_filename.zip')
     """
     try:
-        r = requests.get(url)
+        r = requests.get(url, allow_redirects=True)
+        if r.status_code >= 400:
+            log.error(r.content)
+            return None
         with open(filename,'wb') as f:
             f.write(r.content)
     except Exception as err:
@@ -161,7 +175,10 @@ def _progressbar(url, filename, verbose=False):
     """
     import tqdm
     try:
-        r = requests.get(url, stream=True)
+        r = requests.get(url, allow_redirects=True, stream=True)
+        if r.status_code >= 400:
+            log.error(r.content)
+            return None
         file_size = int(r.headers['Content-Length'])
         chunk = 1
         chunk_size=1024

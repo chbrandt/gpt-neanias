@@ -1,4 +1,6 @@
 import os
+
+# 'sh' is a global (singleton) object.
 from ._sh import sh
 
 

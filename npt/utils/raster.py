@@ -100,31 +100,22 @@ def to_tiff(filename_in, filename_out, format_in, cog=False):
     """
     For accepted formats (in): https://gdal.org/drivers/raster/index.html
     """
-    format_out = 'GTiff'
     format_in = 'ISIS3' if format_in == 'ISIS' else format_in
-    filename_out_tmp = filename_out + '.tmp' if cog else None
-    try:
-        src = rasterio.open(filename_in, 'r', driver=format_in)
-        data = src.read()
-        params = src.meta
-        params['driver'] = format_out
-        if cog:
-            dst = rasterio.open(filename_out_tmp, 'w', **params)
-        else:
-            assert filename_out_tmp is None
-            dst = rasterio.open(filename_out, 'w', **params)
-        dst.write(data)
-        src.close()
-        dst.close()
-    except Exception as err:
-        raise err
-        return None
     if cog:
-        res = tiff2cog(filename_out_tmp, filename_out)
-        # os.remove(filename_out_tmp)
+        return to_cog(filename_in, filename_out, format_in)
     else:
-        assert filename_out_tmp is None
-    return filename_out
+        with rasterio.open(filename_in, 'r', driver=format_in) as src:
+            # Get a copy of the source dataset's profile. Thus our
+            # destination dataset will have the same dimensions,
+            # number of bands, data type, and georeferencing as the
+            # source dataset.
+            kwds = src.profile
+            kwds['driver'] = 'GTiff'
+            # Add GeoTIFF-specific keyword arguments.
+            with rasterio.open(filename_out, 'w', **kwds) as dst:
+                    dst.write(src.read())
+
+        return filename_out
 
 
 def to_cog(filename_in, filename_out, format_in):
@@ -154,10 +145,11 @@ def tiff2cog(filename_in, filename_out):
     """
     Transform GeoTIFF in COG
     """
-    from npt.isis import sh
-    gdal_cmd = sh.wrap('gdal_translate')
-    cog_args = """
-        -co TILED=YES -co COMPRESS=LZW -co BLOCKXSIZE=512 -co BLOCKYSIZE=512
-        -co COPY_SRC_OVERVIEWS=YES --config GDAL_TIFF_OVR_BLOCKSIZE 512
-    """.split()
-    res = gdal_cmd(filename_in, filename_out, *cog_args)
+    # from npt.isis import sh
+    # gdal_cmd = sh.wrap('gdal_translate')
+    # cog_args = """
+    #     -co TILED=YES -co COMPRESS=LZW -co BLOCKXSIZE=512 -co BLOCKYSIZE=512
+    #     -co COPY_SRC_OVERVIEWS=YES --config GDAL_TIFF_OVR_BLOCKSIZE 512
+    # """.split()
+    # res = gdal_cmd(filename_in, filename_out, *cog_args)
+    return to_cog(filename_in, filename_out, format_in='GTiff')

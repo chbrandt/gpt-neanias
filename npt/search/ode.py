@@ -19,6 +19,11 @@ DESCRIPTORS = {
         'product_label': ('Description', 'PRODUCT LABEL FILE'),
         'browse_image': ('Description', 'BROWSE'),
         'browse_thumbnail': ('Description', 'THUMBNAIL')
+    },
+    'mars/mex/hrsc/rdrv3': {
+        'product_image': ('Description', 'PRODUCT DATA FILE WITH LABEL'),
+        'browse_image': ('Description', 'BROWSE IMAGE'),
+        'product_shapefiles': ('Description', 'PRODUCT FOOTPRINT SHAPEFILES (TAR.GZ) *')
     }
 }
 
@@ -59,7 +64,7 @@ def bounding_box(bbox, dataset, how='intersect'):
         return None
     return res
 
-    bbox = bounding_box
+bbox = bounding_box
 
 
 def parse_products(odejson, descriptor):

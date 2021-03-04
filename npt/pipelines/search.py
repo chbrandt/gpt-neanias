@@ -26,8 +26,9 @@ def run(bounding_box, dataset_id, output_geojson=None, contains=False):
 
     how = 'contain' if contains else 'intersect'
     # products = query_footprints(bbox=bounding_box, dataset=dataset_id, contains=contains)
-    products = search.ode.bbox(bounding_box, dataset, how)
-    
+    ode_result = search.ode.bbox(bounding_box, dataset_id, how)
+    products = search.ode.parse_products(ode_result, search.ode.DESCRIPTORS[dataset_id])
+
     if not products:
         return None
     if output_filename:
@@ -67,7 +68,7 @@ def write_geojson(products, filename):
     products: list of product records (from search_footprints)
     filename: GeoJSON filename for the output
     """
-    assert isinstance(products, list), "Expected 'products' to be a list"
+    assert isinstance(products, list), f"Expected 'products' to be a list. Instead: {products}"
     assert filename and filename.strip() != '', "Give me a valid filename"
 
     for prod in products:
@@ -81,4 +82,4 @@ def write_geojson(products, filename):
 
     gdf.to_file(filename, driver='GeoJSON')
     log.info("File '{}' written.".format(filename))
-    return True
+    return gdf

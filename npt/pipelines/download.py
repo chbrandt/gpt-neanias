@@ -20,14 +20,15 @@ def _run_geo_feature(geojson_feature, base_path, progressbar=False):
     * progressbar (False):
         If a (tqdm) progress-bar should show download progress
     """
-    product_feature = geojson_feature
+    product_feature = geojson_feature.copy()
 
     assert base_path, "Expected a valid path, got '{}' instead".format(base_path)
 
     properties = product_feature['properties']
     properties = run_props(properties, base_path, progressbar)
+    if not properties:
+        return False
     product_feature['properties'] = properties
-
     return product_feature
 
 run = _run_geo_feature
@@ -38,8 +39,9 @@ def run_props(properties, base_path, progressbar=False):
 
     image_url = properties['image_url']
     image_path = _download(image_url, basepath=base_path, progressbar=progressbar)
-    if image_path:
-        properties['image_path'] = image_path
+    if not image_path:
+        return False
+    properties['image_path'] = image_path
 
     if ('label_url' in properties
         and properties['label_url'] != properties['image_url']):

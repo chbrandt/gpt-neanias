@@ -125,6 +125,8 @@ class TestDownload:
             #TODO: Add option to download only certain data product types (e.g, "browse image")
             new_feature = pipelines.download.run(feature, odir, progressbar=True)
             print(new_feature)
+            assert new_feature
+
             new_props = set(new_feature.keys()) - set(feature.keys())
             assert 'image_path' in new_feature['properties']
             assert os.path.exists(new_feature['properties']['image_path'])

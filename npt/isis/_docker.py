@@ -1,6 +1,6 @@
-from npt import log
-
 from sh import docker, awk, tail
+
+from npt import log
 
 
 def containers():
@@ -18,7 +18,18 @@ def containers():
     containers = buf.getvalue().split()
     return containers
 
-containers_list = containers
+list_containers = containers
 
-def start_container(name):
-    docker('start',name)
+
+def restart(name):
+    """
+    Re/Start a container
+    """
+    if name in containers():
+        docker('start',name)
+        return True
+    else:
+        log.warning(f"No container '{name}' instantiated. Nothing to restart.")
+        return False
+
+container_restart = restart

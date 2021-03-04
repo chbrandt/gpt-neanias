@@ -34,13 +34,14 @@ def _run_props(properties, output_path, map_projection, tmpdir):
     properties = properties.copy()
     image_filename = properties['image_path']
     out = run_file(image_filename, output_path, map_projection, tmpdir)
-    echo("Output files (IMG,TIF): {!s}".format(out))
+    echo("Output files (CUB,TIF): {!s}".format(out))
     if out:
         echo("IF 'out' (non-null output)")
-        assert len(out) == 2, "Was expecting a tuple of filenames (IMG,TIF). Instead got {!s}".format(out)
+        assert len(out) == 2, "Was expecting a tuple of filenames (CUB,TIF). Instead got {!s}".format(out)
         img_isis, img_tiff = out
         echo("ISIS3/IMG output file: {!s}".format(img_isis))
         echo("GeoTIFF output file: {!s}".format(img_tiff))
+        #TODO: change 'image_path' to 'cube_path'. 'image_path' to stay pointing to source file
         properties['image_path'] = img_isis
         properties['tiff_path'] = img_tiff
         return properties
@@ -48,7 +49,8 @@ def _run_props(properties, output_path, map_projection, tmpdir):
     return None
 
 
-def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=None):
+#TODO: Add argument to set docker container to run --e.g., isis3-- commands
+def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=None, cog=True):
     # Create a temp dir for the processing
     import shutil
     import tempfile
@@ -66,6 +68,12 @@ def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=Non
     else:
         log.info("Temp dir: '{}'".format(tmpdir))
 
+    #TODO: Add argument to set docker container to run --e.g., isis3-- commands
+    #       Something along the lines:
+    #       > run_container = 'isis3_gdal'
+    #       > from npt.isis import sh
+    #       > if run_container: sh.set_docker(run_container)
+
     try:
         f_in = shutil.copy(filename_init, tmpdir)
         log.info("File '{}' copied".format(filename_init))
@@ -74,10 +82,16 @@ def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=Non
         from npt.isis import format
         # -- Transfrom PDS (IMG) into ISIS (CUB) file
         f_cub = _change_file_extension(f_in, 'cub')
+
         format.pds2isis(f_in, f_cub)
         # -- Init SPICE kernel
         format.init_spice(f_cub)
 
+        #TODO: be able to define at function level the container to run
+        #       Functions in FORMAT and CALIBRATION, for example, could use a
+        #       container 'isis3', whereas the FORMATting to TIFF, could use a
+        #       different container, 'gispy' with "gdal" in it (not in 'isis3')
+        
         # CALIBRATION
         from npt.isis import calibration
         f_cal = _add_file_subextension(f_cub, 'cal')
@@ -94,7 +108,7 @@ def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=Non
 
         # FORMAT to TIFF
         f_tif = _change_file_extension(f_map, 'tif')
-        format.isis2tiff(f_map, f_tif)
+        format.isis2tiff(f_map, f_tif, cog=cog)
 
     except Exception as err:
         log.error(err)
@@ -102,8 +116,9 @@ def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=Non
     else:
         log.info("Processing finished, file '{}' created.".format(f_tif))
 
-    f_tif_out =  _change_file_dirname(f_tif, output_path)
-    f_cub_out =  _change_file_dirname(f_cub, output_path)
+    f_tif_out = _change_file_extension(f_in, 'tif')
+    f_tif_out = _change_file_dirname(f_tif_out, output_path)
+    f_cub_out = _change_file_dirname(f_cub, output_path)
 
     try:
         log.info("Copying from temp to archive/output path")

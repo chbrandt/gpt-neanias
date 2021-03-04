@@ -44,6 +44,6 @@ from ._sh import sh
 
 isissh = sh    # Deprecated, here only for backwards compatibility
 def set_docker(name):
-    isissh.set_docker(name)
+    sh.set_docker(name)
 
 # __all__ = ['isissh']

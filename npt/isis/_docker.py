@@ -17,3 +17,8 @@ def containers():
 
     containers = buf.getvalue().split()
     return containers
+
+containers_list = containers
+
+def start_container(name):
+    docker('start',name)

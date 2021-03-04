@@ -1,5 +1,7 @@
 from npt import log
 
+# import sh
+
 from ._docker import containers as list_containers
 
 
@@ -14,8 +16,8 @@ def _set_sh_docker(name):
     if name not in list_containers():
         # start/run container
         raise ValueError
-    isissh = docker.bake(_exec_.format(name=name).split())
-    return isissh
+    dsh = docker.bake(_exec_.format(name=name).split())
+    return dsh
 
 
 def _map_args(args, map_paths):
@@ -47,7 +49,7 @@ def _map_kwargs(kwargs, map_paths):
     return _kw
 
 
-def _wrap(exec, sh, log=log):
+def _wrap(exec, sh_local, log=log):
     """
     Return 'sh' to be called with arguments to 'exec'
 
@@ -57,7 +59,7 @@ def _wrap(exec, sh, log=log):
     Args:
         exec: string
             command to execute by the container
-        sh: Sh
+        sh_local: Sh
         log: logging-handler
     """
     if isinstance(exec, str):
@@ -67,11 +69,11 @@ def _wrap(exec, sh, log=log):
         kv = [f'{k}={v}' for k,v in kwargs.items()]
         comm = ' '.join(exec+v+kv)
         log.debug(comm)
-        return sh(comm)
+        return sh_local(comm)
     return _sh
 
 
-class Sh():
+class Sh(object):
     _sh = None
     _maps = None
     def __init__(self):
@@ -107,7 +109,9 @@ class Sh():
         self._maps = mappings
 
     def wrap(self, exec):
-        return _wrap(exec, sh=self)
+        return _wrap(exec, sh_local=self)
+
+    bake = wrap
 
 
 # Global/Singleton

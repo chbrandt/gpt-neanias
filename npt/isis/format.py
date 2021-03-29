@@ -13,13 +13,20 @@ _dstools = {
 
 
 def pds2isis(filename_in, filename_out, dataset='ctx'):
+    #TODO: "instrument", not "dataset"
     assert dataset in _dstools['pds2isis'], "Dataset '{}' not supported.".format(dataset)
     foo = _dstools['pds2isis'][dataset]
     res = foo(FROM=filename_in, TO=filename_out)
     sh.log(res)
     return res
+    
 
 def init_spice(filename):
+    """
+    Insert apropriate SPICE kernel to file
+
+    *NOTE: non-pure function, 'filename' gets changed.
+    """
     spiceinit = sh.wrap('spiceinit')
     res = spiceinit(FROM=filename)
     sh.log(res)

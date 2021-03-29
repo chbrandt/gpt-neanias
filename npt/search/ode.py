@@ -41,7 +41,7 @@ def bounding_box(bbox, dataset, how='intersect'):
             Longitudes are in the range [0:360] (180 center).
         dataset: string
             Datasets identifiers.
-            Options are 'mro/ctx/edr', 'mro/hirise/rdrv11'.
+            Options are 'mars/mro/ctx/edr', 'mars/mro/hirise/rdrv11'.
         how: string
             Options are 'intersect', 'contain'
     Return:

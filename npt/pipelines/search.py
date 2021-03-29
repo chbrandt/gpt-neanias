@@ -16,7 +16,7 @@ def run(bounding_box, dataset_id, output_geojson=None, contains=False):
         Dictionary with 'minlat','maxlat','westlon','eastlon' keys;
         Longitues range is [0:360] (180 center).
     * dataset_id:
-        Datasets identifiers. Options are 'mro/ctx/edr', 'mro/hirise/rdrv11'.
+        Datasets identifiers. Options are 'mars/mro/ctx/edr', 'mars/mro/hirise/rdrv11'.
     * output_geojson:
         Filename for the GeoJSON containing found products as Features.
     """
@@ -58,6 +58,19 @@ def run(bounding_box, dataset_id, output_geojson=None, contains=False):
 #     products = ode.parse_products(products, schema)
 #     return products
 #
+
+def to_geojson(products):
+    assert isinstance(products, list), f"Expected 'products' to be a list. Instead: {products}"
+    prods = products.copy()
+    for prod in prods:
+        try:
+            prod['geometry'] = shapely.wkt.loads(prod['geometry'])
+        except TypeError as err:
+            log.info("Error in: ", prod)
+            raise err
+
+    gdf = gpd.GeoDataFrame(prods)
+    return gdf.to_json()
 
 def write_geojson(products, filename):
     """

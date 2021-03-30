@@ -59,19 +59,6 @@ def run(bounding_box, dataset_id, output_geojson=None, contains=False):
 #     return products
 #
 
-def to_geojson(products):
-    assert isinstance(products, list), f"Expected 'products' to be a list. Instead: {products}"
-    prods = products.copy()
-    for prod in prods:
-        try:
-            prod['geometry'] = shapely.wkt.loads(prod['geometry'])
-        except TypeError as err:
-            log.info("Error in: ", prod)
-            raise err
-
-    gdf = gpd.GeoDataFrame(prods)
-    return gdf.to_json()
-
 def write_geojson(products, filename):
     """
     Write products to a GeoJSON 'filename'. Return GeoPandas dataframe.

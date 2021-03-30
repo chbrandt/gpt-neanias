@@ -67,6 +67,25 @@ def bounding_box(bbox, dataset, how='intersect'):
 bbox = bounding_box
 
 
+def to_geojson(products):
+    import json
+    import shapely
+    import geopandas as gpd
+
+    assert isinstance(products, list), f"Expected 'products' to be a list. Instead: {products}"
+
+    prods = products.copy()
+    for prod in prods:
+        try:
+            prod['geometry'] = shapely.wkt.loads(prod['geometry'])
+        except TypeError as err:
+            log.info("Error in: ", prod)
+            raise err
+
+    gdf = gpd.GeoDataFrame(prods)
+    return json.loads(gdf.to_json())
+
+
 def parse_products(odejson, descriptor):
     try:
         products = odejson['ODEResults']['Products']['Product']

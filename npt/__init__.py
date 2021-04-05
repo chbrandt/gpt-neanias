@@ -7,3 +7,7 @@ You'll find here tools to search, download and process Planetary data.
 """
 from . import _log as log
 # from ._db import db
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

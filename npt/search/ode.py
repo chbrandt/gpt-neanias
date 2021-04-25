@@ -24,12 +24,56 @@ DESCRIPTORS = {
         'product_image': ('Description', 'PRODUCT DATA FILE WITH LABEL'),
         'browse_image': ('Description', 'BROWSE IMAGE'),
         'product_shapefiles': ('Description', 'PRODUCT FOOTPRINT SHAPEFILES (TAR.GZ) *')
+    },
+    'mars/mex/hrsc/refdr3': {
+        'product_image': ('Description', 'PRODUCT DATA FILE'),
+        'product_label': ('Description', 'PRODUCT LABEL FILE'),
+        'browse_image': ('Description', 'BROWSE'),
+        'browse_thumbnail': ('Description', 'THUMBNAIL')
     }
 }
 
-_schema = {
-    'bbox': {'minlat': float, 'maxlat': float, 'westlon': float, 'eastlon': float}
-}
+
+class Search(object):
+    product_type = None
+    def __init__(self, product_type):
+        if product_type:
+            self.set_product_type(product_type)
+
+    def set_product_type(self, product_type):
+        assert product_type in DESCRIPTORS, f"Product-type expected to be one of {DESCRIPTORS.keys()}"
+        self.product_type = product_type
+
+    def bbox(self, bbox, how):
+        return Results(
+            results = bounding_box(bbox=bbox, dataset=self.product_type, how=how),
+            product_type = self.product_type
+            )
+
+
+class Results(object):
+    def __init__(self, results, product_type):
+        self.results = results
+        self.product_type = product_type
+
+    def __str__(self):
+        import json
+        return json.dumps(self.results)
+
+    def __repr__(self):
+        return str(self)
+
+    def _parse(self, descriptor):
+        #TODO: set results in place, return 'self'
+        return parse_products(self.results, descriptor)
+
+    def to_geojson(self):
+        return to_geojson(self._parse(DESCRIPTORS[self.product_type]))
+
+
+# _schema = {
+#     'bbox': {'minlat': float, 'maxlat': float, 'westlon': float, 'eastlon': float}
+# }
 
 def bounding_box(bbox, dataset, how='intersect'):
     """
@@ -53,9 +97,11 @@ def bounding_box(bbox, dataset, how='intersect'):
     """
     target,host,instr,ptype = dataset.split('/')
 
-    assert all(k in _schema['bbox'] for k in bbox), "Expected 'bounding_box' like: _schema['bbox']"
+    # assert all(k in _schema['bbox'] for k in bbox), "Expected 'bounding_box' like: _schema['bbox']"
+    from npt.utils.bbox import Bbox
+    bbox = Bbox(bbox)
 
-    res = _query_ODE(_set_payload(bbox, target, host, instr, ptype, how=how))
+    res = _query_ODE(_set_payload(bbox.to_dict(), target, host, instr, ptype, how=how))
     log.debug("Request result: {!r}".format(res))
 
     status = res['ODEResults']['Status']
@@ -63,8 +109,6 @@ def bounding_box(bbox, dataset, how='intersect'):
         log.error('Request failed: {!s}'.format(res))
         return None
     return res
-
-bbox = bounding_box
 
 
 def to_geojson(products):
@@ -187,3 +231,7 @@ def _find_product_file(product_files, product_type, descriptor):
     _multiple_matches = "I was expecting only one Product matching ptype '{}' bu got '{}'."
     assert len(pfl) == 1, _multiple_matches.format(product_type, len(pfl))
     return pfl[0]
+
+
+def available_product_types():
+    return list(DESCRIPTORS.keys())

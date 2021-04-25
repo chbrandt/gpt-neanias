@@ -78,6 +78,24 @@ def list():
         print(dset['id'])
 
 
+class ResultsSearch:
+    _data = None
+    def to_geojson(self, fileout=None):
+        raise NotImplementedError
+
+    def download(self, outdir=None):
+        raise NotImplementedError
+
+
+class DatasetBase(object):
+    def search(cls, bbox: BBox) -> ResultsSearch:
+        try:
+            res = ode.search(bbox, dataset=cls._datasetid)
+        except:
+            res = ResultsBase()
+        return res
+
+
 # class Datasets(object):
 #     """
 #     Manage datasets package<->db

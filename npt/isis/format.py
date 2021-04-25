@@ -19,7 +19,7 @@ def pds2isis(filename_in, filename_out, dataset='ctx'):
     res = foo(FROM=filename_in, TO=filename_out)
     sh.log(res)
     return res
-    
+
 
 def init_spice(filename):
     """
@@ -35,3 +35,6 @@ def init_spice(filename):
 def isis2tiff(filename_in, filename_out, cog=False):
     # return isissh.isis2std(FROM=filename_in, TO=filename_out, FORMAT='TIFF')
     return raster.to_tiff(filename_in, filename_out, format_in='ISIS', cog=cog)
+
+def jpeg2tiff(filename_in, filename_out, cog=False):
+    return raster.to_tiff(filename_in, filename_out, format_in='JP2OpenJPEG', cog=cog)

@@ -1,6 +1,6 @@
-import os
-import shapely
-import geopandas as gpd
+# import os
+# import shapely
+# import geopandas as gpd
 
 from . import log
 
@@ -25,61 +25,45 @@ def run(bounding_box, dataset_id, output_geojson=None, contains=False):
         return None
 
     how = 'contain' if contains else 'intersect'
-    # products = query_footprints(bbox=bounding_box, dataset=dataset_id, contains=contains)
-    ode_result = search.ode.bbox(bounding_box, dataset_id, how)
-    products = search.ode.parse_products(ode_result, search.ode.DESCRIPTORS[dataset_id])
+    # ode_result = search.ode.bbox(bounding_box, dataset_id, how)
+    # products = search.ode.parse_products(ode_result, search.ode.DESCRIPTORS[dataset_id])
+    results = search.product_type(dataset_id, bbox=bounding_box, how=how)
+    # results = results.filter(descriptors=DESCRIPTORS_CUSTOM)
 
     if not products:
         return None
+
+    geojson = results.to_geojson()
+
     if output_filename:
-        return write_geojson(products, filename=output_filename)
-    return products
+        # return write_geojson(products, filename=output_filename)
+        with open(output_filename, 'w') as fp:
+            fp.dump(geojson, fp)
 
-# query2geojson = run
-#
-# def query_footprints(bbox, dataset=None, contains=False,
-#                      target='mars', host=None, instr=None, ptype=None):
+    return geojson
+
+
+# def write_geojson(products, filename):
 #     """
-#     Return list of found products (in dictionaries)
+#     Write products to a GeoJSON 'filename'. Return GeoPandas dataframe.
 #
-#     dataset be like: 'mro/hirise/rdrv11'
-#     bbox: {'minlat': -0.5, 'maxlat': 0.5, 'westlon': 359.5, 'eastlon': 0.5}
+#     > Note: This function modifies field 'geometry' from 'products'
+#
+#     products: list of product records (from search_footprints)
+#     filename: GeoJSON filename for the output
 #     """
-#     if dataset:
-#         target,host,instr,ptype = dataset.split('/')
+#     assert isinstance(products, list), f"Expected 'products' to be a list. Instead: {products}"
+#     assert filename and filename.strip() != '', "Give me a valid filename"
 #
-#     ode = ODE(target,host,instr,ptype)
+#     for prod in products:
+#         try:
+#             prod['geometry'] = shapely.wkt.loads(prod['geometry'])
+#         except TypeError as err:
+#             log.info("Error in: ", prod)
+#             raise err
 #
-#     req = ode.query_bbox(bbox, contains=contains)
+#     gdf = gpd.GeoDataFrame(products)
 #
-#     products = ode.read_products(req)
-#
-#     schema = {'meta':None, 'files':None, 'footprints':None}
-#     products = ode.parse_products(products, schema)
-#     return products
-#
-
-def write_geojson(products, filename):
-    """
-    Write products to a GeoJSON 'filename'. Return GeoPandas dataframe.
-
-    > Note: This function modifies field 'geometry' from 'products'
-
-    products: list of product records (from search_footprints)
-    filename: GeoJSON filename for the output
-    """
-    assert isinstance(products, list), f"Expected 'products' to be a list. Instead: {products}"
-    assert filename and filename.strip() != '', "Give me a valid filename"
-
-    for prod in products:
-        try:
-            prod['geometry'] = shapely.wkt.loads(prod['geometry'])
-        except TypeError as err:
-            log.info("Error in: ", prod)
-            raise err
-
-    gdf = gpd.GeoDataFrame(products)
-
-    gdf.to_file(filename, driver='GeoJSON')
-    log.info("File '{}' written.".format(filename))
-    return gdf
+#     gdf.to_file(filename, driver='GeoJSON')
+#     log.info("File '{}' written.".format(filename))
+#     return gdf

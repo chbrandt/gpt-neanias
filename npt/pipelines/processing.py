@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 
 from . import log
 
@@ -17,12 +19,12 @@ def proj_planet2earth(filein, fileout):
     return warp(filein, fileout)
 
 
-def _run_geo_feature(geojson_feature, output_path, projection="sinusoidal", tmpdir=None):
+def _run_geo_feature(geojson_feature, output_path, projection="sinusoidal", tmpdir=None, datasetId=None):
     echo("Processing Feature: {!s}".format(geojson_feature))
     echo("Output go to: {!s}".format(output_path))
     feature = geojson_feature.copy()
     properties = feature['properties']
-    properties = _run_props(properties, output_path, projection, tmpdir)
+    properties = _run_props(properties, output_path, projection, tmpdir, datasetId)
     feature['properties'] = properties
     echo("Post-processed feature: {!s}".format(feature))
     return feature
@@ -30,30 +32,47 @@ def _run_geo_feature(geojson_feature, output_path, projection="sinusoidal", tmpd
 run = _run_geo_feature
 
 
-def _run_props(properties, output_path, map_projection, tmpdir):
+def _run_props(properties, output_path, map_projection, tmpdir, datasetId):
     properties = properties.copy()
     image_filename = properties['image_path']
-    out = run_file(image_filename, output_path, map_projection, tmpdir)
+    out = run_file(image_filename, output_path, map_projection, tmpdir, datasetId=datasetId)
     echo("Output files (CUB,TIF): {!s}".format(out))
     if out:
         echo("IF 'out' (non-null output)")
-        assert len(out) == 2, "Was expecting a tuple of filenames (CUB,TIF). Instead got {!s}".format(out)
-        img_isis, img_tiff = out
-        echo("ISIS3/IMG output file: {!s}".format(img_isis))
-        echo("GeoTIFF output file: {!s}".format(img_tiff))
-        #TODO: change 'image_path' to 'cube_path'. 'image_path' to stay pointing to source file
-        properties['image_path'] = img_isis
-        properties['tiff_path'] = img_tiff
-        return properties
+        if len(out) == 2:
+            assert len(out) == 2, "Was expecting a tuple of filenames (CUB,TIF). Instead got {!s}".format(out)
+            img_isis, img_tiff = out
+            echo("ISIS3/IMG output file: {!s}".format(img_isis))
+            echo("GeoTIFF output file: {!s}".format(img_tiff))
+            #TODO: change 'image_path' to 'cube_path'. 'image_path' to stay pointing to source file
+            properties['image_path'] = img_isis
+            properties['tiff_path'] = img_tiff
+            return properties
+        else:
+            assert len(out) == 1, "Was expecting a tuple a filename (TIF). Instead got {!s}".format(out)
+            img_tiff = out[0]
+            echo("GeoTIFF output file: {!s}".format(img_tiff))
+            properties['image_path'] = ''
+            properties['tiff_path'] = img_tiff
+            return properties
     log.error("Processing output is null. See the temp files.")
     return None
 
 
 #TODO: Add argument to set docker container to run --e.g., isis3-- commands
-def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=None, cog=True, make_dirs=True):
+def run_file(filename_init, output_path, map_projection="sinusoidal",
+            tmpdir=None, cog=True, make_dirs=True,
+            datasetId='mars/mro/ctx/edr'):
+
+    _datasets = [
+        'mars/mex/hrsc/refdr3',
+        'mars/mro/ctx/edr',
+        'mars/mro/hirise/rdrv11'
+    ]
+
+    assert datasetId in _datasets, f"Dataset {datasetId} not supported"
+
     # Create a temp dir for the processing
-    import shutil
-    import tempfile
     if tmpdir:
         assert os.path.isdir(tmpdir), """Given tmpdir '{}' does not exist""".format(tmpdir)
         tempfile.tempdir = tmpdir
@@ -80,6 +99,72 @@ def run_file(filename_init, output_path, map_projection="sinusoidal", tmpdir=Non
     #       > from npt.isis import sh
     #       > if run_container: sh.set_docker(run_container)
 
+    if datasetId == 'mars/mro/ctx/edr':
+        return run_file_ctx(filename_init, output_path, map_projection, tmpdir, cog)
+    elif datasetId == 'mars/mro/hirise/rdrv11':
+        return run_file_hirise(filename_init, output_path, map_projection, tmpdir, cog)
+    elif datasetId == 'mars/mex/hrsc/refdr3':
+        return run_file_hrsc(filename_init, output_path, map_projection, tmpdir, cog)
+    else:
+        assert None, "This line should not be reached"
+
+
+def run_file_hrsc(filename_init, output_path, map_projection, tmpdir, cog):
+    from npt.isis import format
+
+    f_in = shutil.copy(filename_init, tmpdir)
+    log.info("File '{}' copied".format(filename_init))
+
+    # FORMAT to TIFF
+    f_tif = _change_file_extension(f_in, 'tif')
+    format.jpeg2tiff(f_in, f_tif, cog=cog)
+
+    f_tif_out = _change_file_extension(f_in, 'tif')
+    f_tif_out = _change_file_dirname(f_tif_out, output_path)
+
+    try:
+        log.info("Copying from temp to archive/output path")
+        shutil.move(f_tif, f_tif_out)
+    except Exception as err:
+        log.error("File '{}' could not be created".format(f_tif_out))
+        log.error("Temporary files, '{}' will remain. Remove them manually.".format(tmpdir))
+        raise err
+    finally:
+        log.info("Cleaning temporary files/directory ({})".format(tmpdir))
+        shutil.rmtree(tmpdir)
+
+    return (f_tif_out,)
+
+
+def run_file_hirise(filename_init, output_path, map_projection, tmpdir, cog):
+    from npt.isis import format
+
+    f_in = shutil.copy(filename_init, tmpdir)
+    log.info("File '{}' copied".format(filename_init))
+
+    # FORMAT to TIFF
+    f_tif = _change_file_extension(f_in, 'tif')
+    format.jpeg2tiff(f_in, f_tif, cog=cog)
+
+    f_tif_out = _change_file_extension(f_in, 'tif')
+    f_tif_out = _change_file_dirname(f_tif_out, output_path)
+
+    try:
+        log.info("Copying from temp to archive/output path")
+        shutil.move(f_tif, f_tif_out)
+    except Exception as err:
+        log.error("File '{}' could not be created".format(f_tif_out))
+        log.error("Temporary files, '{}' will remain. Remove them manually.".format(tmpdir))
+        raise err
+    finally:
+        log.info("Cleaning temporary files/directory ({})".format(tmpdir))
+        shutil.rmtree(tmpdir)
+
+    return (f_tif_out,)
+
+
+
+def run_file_ctx(filename_init, output_path, map_projection, tmpdir, cog):
     try:
         f_in = shutil.copy(filename_init, tmpdir)
         log.info("File '{}' copied".format(filename_init))

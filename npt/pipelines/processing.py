@@ -20,10 +20,16 @@ def proj_planet2earth(filein, fileout):
 
 
 def _run_geo_feature(geojson_feature, output_path, projection="sinusoidal", tmpdir=None, datasetId=None):
+    from copy import deepcopy
     echo("Processing Feature: {!s}".format(geojson_feature))
     echo("Output go to: {!s}".format(output_path))
-    feature = geojson_feature.copy()
+    feature = deepcopy(geojson_feature)
     properties = feature['properties']
+    target = properties['targetName']
+    mission = properties['mission']
+    instrument = properties['instrumentId']
+    product_type = properties['observationMode']
+    datasetId = f"{target}/{mission}/{instrument}/{product_type}"
     properties = _run_props(properties, output_path, projection, tmpdir, datasetId)
     feature['properties'] = properties
     echo("Post-processed feature: {!s}".format(feature))
@@ -33,7 +39,8 @@ run = _run_geo_feature
 
 
 def _run_props(properties, output_path, map_projection, tmpdir, datasetId):
-    properties = properties.copy()
+    from copy import deepcopy
+    properties = deepcopy(properties)
     image_filename = properties['image_path']
     out = run_file(image_filename, output_path, map_projection, tmpdir, datasetId=datasetId)
     echo("Output files (CUB,TIF): {!s}".format(out))

@@ -40,10 +40,6 @@ from . import (format,
 # import sh
 # isissh = sh(_long_prefix="")
 
-from ._sh import sh
+from wsh import wsh as sh
 
 isissh = sh    # Deprecated, here only for backwards compatibility
-def set_docker(name):
-    sh.set_docker(name)
-
-# __all__ = ['isissh']

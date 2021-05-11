@@ -33,13 +33,14 @@ from any Python `reserved keywords`_ such as ``from``; You *cannot* call:
 .. _GMAP: bla
 .. _sh: bla
 """
-from . import (format,
-               calibration,
-               projection)
+from wsh import wsh as sh
+
+from npt import log
+
+from . import calibration, format, projection
 
 # import sh
 # isissh = sh(_long_prefix="")
 
-from wsh import wsh as sh
 
 isissh = sh    # Deprecated, here only for backwards compatibility

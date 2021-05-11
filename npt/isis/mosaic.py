@@ -1,4 +1,8 @@
-from ._sh import isissh
+# from . import isissh
+from . import sh
 
 def mosaic(filename_mapcubs_list='mapcubs.list', filename_mosaic='mosaic.cub'):
-    isissh.automos(FROMLIST=filename_mapcubs_list, MOSAIC=filename_mosaic)
+    automos = sh.wrap('automos')
+    res = automos(FROMLIST=filename_mapcubs_list, MOSAIC=filename_mosaic)
+    sh.log(res)
+    return res

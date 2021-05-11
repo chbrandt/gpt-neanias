@@ -70,5 +70,4 @@ def _run_features(features: list) -> list:
 
 
 def mosaic_ctx(features):
-    from npt.isis import mosaic
-    
+    from npt.isis.mosaic import mosaic

@@ -69,5 +69,32 @@ def _run_features(features: list) -> list:
     assert None
 
 
-def mosaic_ctx(features):
-    from npt.isis.mosaic import mosaic
+def mosaic_ctx(features: list, engine='isis'):
+    """
+    Input:
+        - features : list of geo-features
+        Each feature contain in properties 'image_path' (isis) or 'tiff_path' (gdal)
+        - engine : string
+        Options are ['isis','gdal']
+    """
+    if engine == 'isis':
+        from npt.isis.mosaic import mosaic
+        path_field = 'image_path'
+        ext = 'cub'
+    else:
+        assert engine == 'gdal'
+        from npt.gdal.mosaic import mosaic
+        path_field = 'tiff_path'
+        ext = 'tif'
+
+    # _pf = 'properties'
+    # input_filenames = [ f[_p][path_field] for f in features ]
+    # output_filename = '.'.join('mosaic',ext)
+
+    import geopandas
+    gdf = geopandas.GeoDataFrame.from_features(features)
+    input_filenames = list(gdf[path_field])
+
+    output_filename = mosaic(input_filenames, output_filename)
+    if not output_filename:
+        return None

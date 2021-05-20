@@ -33,9 +33,12 @@ from any Python `reserved keywords`_ such as ``from``; You *cannot* call:
 .. _GMAP: bla
 .. _sh: bla
 """
-from wsh import wsh as sh
-
 from npt import log
+
+import wsh
+wsh.log = log
+
+sh = wsh.Wsh()
 
 from . import calibration, format, projection
 

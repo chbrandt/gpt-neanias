@@ -23,6 +23,9 @@ error = logger.error
 critical = logger.critical
 
 
+def set_level(level):
+    logger.setLevel(level.upper() if isinstance(level, str) else level)
+
 def set_stream(level=_level, format=_format):
     # create console handler if not there yet
     level = level.upper()

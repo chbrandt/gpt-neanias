@@ -59,7 +59,7 @@ def _search(bbox=None, dataset=None, geojson_out=None, contain=False):
 
     if None in (bbox, dataset):
         return False
-        
+
     bbox = bbox.replace('[','').replace(']','')
     bounding_box = bbox_string_2_dict(bbox)
     log.debug("Bounding-box: {!s}".format(bounding_box))
@@ -112,7 +112,7 @@ def download(geojson_file, basepath, output, progress, parallel):
 @option('--parallel/--serial', default=False, help="Process in parallel")
 @option('--docker-isis', default=None, help="ISIS3 Docker container to use")
 @option('--tmpdir', default=None, help="Temp dir to use during processing")
-def process(geojson_file, basepath, parallel, docker_isis, tmpdir, output):
+def process(geojson_file, basepath, parallel, docker_isis, tmpdir, output, dataset):
     """
     Reduce CTX data
     """
@@ -130,9 +130,10 @@ def process(geojson_file, basepath, parallel, docker_isis, tmpdir, output):
     products = []
     for i,feature in enumerate(features):
         log.info("Feature {:d}/{:d}".format(i+1, len(features)))
-        mod_feature = Processing.run(feature,
-                                     output_path=basepath,
-                                     tmpdir=tmpdir)
+        mod_feature = Processing.reduce(feature,
+                                        dataset,
+                                        output_path=basepath,
+                                        tmpdir=tmpdir)
         products.append(mod_feature)
 
     if output:
@@ -145,11 +146,37 @@ def process(geojson_file, basepath, parallel, docker_isis, tmpdir, output):
 @main.command()
 @argument('filespath')
 @argument('basepath')
-def mosaic(filespath, basepath):
+def mosaic(input_geojson, basepath, output, output_field='mosaic_path',
+            sources_field='mosaic_sources', tmpdir='tmp/'):
     """
-    TBD
+    Make mosaic from files in 'input_geojson' file. Write GeoJSON with mosaic feature.
     """
     log.args(locals())
+
+    features = geojson.read(input_geojson)
+    log.info("{:d} features read".format(len(features)))
+
+    filenames = [ f['properties'][input_field] for f in features ]
+    mosaic_path = Processing.mosaic(filenames,
+                                    output_path=basepath,
+                                    tmpdir=tmpdir)
+
+    # Define the new feature (mosaic)
+    filenames = ','.join(filenames)
+    feature = {
+        'properties': {
+            output_field: mosaic_path,
+            sources_field: filenames,
+        },
+        'geometry': None
+    }
+    products = [feature]
+
+    if output:
+        json_2_geojson(products, filename=output)
+    else:
+        import json
+        click.echo(json.dumps(products, indent=2))
     raise NotImplementedError
 
 
